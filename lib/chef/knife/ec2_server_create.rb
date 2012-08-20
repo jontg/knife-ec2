@@ -135,6 +135,10 @@ class Chef
         :long => "--ebs-size SIZE",
         :description => "The size of the EBS volume in GB, for EBS-backed instances"
 
+      option :ebs_optimized,
+        :long => "--ebs_optimized",
+        :description => "Enabled optimized EBS I/O"
+
       option :ebs_no_delete_on_term,
         :long => "--ebs-no-delete-on-term",
         :description => "Do not delete EBS volumn on instance termination"
@@ -162,6 +166,12 @@ class Chef
         :description => "Verify host key, enabled by default.",
         :boolean => true,
         :default => true
+      
+      option :ephemeral,
+        :long => "--ephemeral EPHEMERAL_DEVICES",
+        :description => "Comma separated list of device locations (eg - /dev/sdb) to map ephemeral devices",
+        :proc => lambda { |o| o.split(/[\s,]+/) },
+        :default => []
 
       option :aws_user_data,
         :long => "--user-data USER_DATA_FILE",
@@ -219,6 +229,10 @@ class Chef
 
         hashed_tags.each_pair do |key,val|
           connection.tags.create :key => key, :value => val, :resource_id => @server.id
+        end
+
+        (config[:ephemeral] || []).each_with_index do |device_name, i|
+          server_def[:block_device_mapping] << {'VirtualName' => "ephemeral#{i}", 'DeviceName' => device_name}
         end
 
         msg_pair("Instance ID", @server.id)
@@ -294,6 +308,9 @@ class Chef
                           "Use file system tools to make use of the increased volume size."
               msg_pair("Warning", volume_too_large_warning, :yellow)
             end
+          end
+          if config[:ebs_optimized]
+            msg_pair("EBS is Optimized", @server.ebs_optimized.to_s)
           end
         end
         if vpc_mode?
@@ -401,12 +418,18 @@ class Chef
                         else
                           ami_map["deleteOnTermination"]
                         end
+          ebs_optimized = if config[:ebs_optimized]
+                          "true"
+                        else
+                          "false"
+                        end
           server_def[:block_device_mapping] =
             [{
                'DeviceName' => ami_map["deviceName"],
                'Ebs.VolumeSize' => ebs_size,
                'Ebs.DeleteOnTermination' => delete_term
              }]
+          server_def[:ebs_optimized] = ebs_optimized
         end
 
         server_def
