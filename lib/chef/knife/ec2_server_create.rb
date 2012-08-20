@@ -165,6 +165,12 @@ class Chef
         :description => "Verify host key, enabled by default.",
         :boolean => true,
         :default => true
+      
+      option :ephemeral,
+        :long => "--ephemeral EPHEMERAL_DEVICES",
+        :description => "Comma separated list of device locations (eg - /dev/sdb) to map ephemeral devices",
+        :proc => lambda { |o| o.split(/[\s,]+/) },
+        :default => []
 
       option :aws_user_data,
         :long => "--user-data USER_DATA_FILE",
@@ -222,6 +228,10 @@ class Chef
 
         hashed_tags.each_pair do |key,val|
           connection.tags.create :key => key, :value => val, :resource_id => @server.id
+        end
+
+        (config[:ephemeral] || []).each_with_index do |device_name, i|
+          server_def[:block_device_mapping] << {'VirtualName' => "ephemeral#{i}", 'DeviceName' => device_name}
         end
 
         msg_pair("Instance ID", @server.id)
