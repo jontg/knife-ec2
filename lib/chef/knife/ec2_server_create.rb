@@ -165,7 +165,7 @@ class Chef
         :description => "Verify host key, enabled by default.",
         :boolean => true,
         :default => true
-      
+
       option :ephemeral,
         :long => "--ephemeral EPHEMERAL_DEVICES",
         :description => "Comma separated list of device locations (eg - /dev/sdb) to map ephemeral devices",
@@ -230,10 +230,6 @@ class Chef
           connection.tags.create :key => key, :value => val, :resource_id => @server.id
         end
 
-        (config[:ephemeral] || []).each_with_index do |device_name, i|
-          server_def[:block_device_mapping] << {'VirtualName' => "ephemeral#{i}", 'DeviceName' => device_name}
-        end
-
         msg_pair("Instance ID", @server.id)
         msg_pair("Flavor", @server.flavor_id)
         msg_pair("Image", @server.image_id)
@@ -245,7 +241,7 @@ class Chef
         # default security group id at this point unless we look it up, hence
         # 'default' is printed if no id was specified.
         printed_security_groups = "default"
-        printed_security_groups = @server.groups.join(", ") if @server.groups 
+        printed_security_groups = @server.groups.join(", ") if @server.groups
         msg_pair("Security Groups", printed_security_groups) unless vpc_mode? or (@server.groups.nil? and @server.security_group_ids)
 
         printed_security_group_ids = "default"
@@ -363,7 +359,7 @@ class Chef
           ui.error("You have not provided a valid image (AMI) value.  Please note the short option for this value recently changed from '-i' to '-I'.")
           exit 1
         end
-        
+
         if vpc_mode? and !!config[:security_groups]
           ui.error("You are using a VPC, security groups specified with '-G' are not allowed, specify one or more security group ids with '-g' instead.")
           exit 1
@@ -429,6 +425,9 @@ class Chef
                'Ebs.DeleteOnTermination' => delete_term
              }]
           server_def[:ebs_optimized] = ebs_optimized
+          (config[:ephemeral] || []).each_with_index do |device_name, i|
+            server_def[:block_device_mapping] << {'VirtualName' => "ephemeral#{i}", 'DeviceName' => device_name}
+          end
         end
 
         server_def
