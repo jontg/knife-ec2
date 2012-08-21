@@ -169,8 +169,7 @@ class Chef
       option :ephemeral,
         :long => "--ephemeral EPHEMERAL_DEVICES",
         :description => "Comma separated list of device locations (eg - /dev/sdb) to map ephemeral devices",
-        :proc => lambda { |o| o.split(/[\s,]+/) },
-        :default => []
+        :proc => Proc.new { |key| Chef::Config[:knife][:ephemeral] = key }
 
       option :aws_user_data,
         :long => "--user-data USER_DATA_FILE",
@@ -425,8 +424,13 @@ class Chef
                'Ebs.DeleteOnTermination' => delete_term
              }]
           server_def[:ebs_optimized] = ebs_optimized
-          (config[:ephemeral] || []).each_with_index do |device_name, i|
-            server_def[:block_device_mapping] << {'VirtualName' => "ephemeral#{i}", 'DeviceName' => device_name}
+
+          ephemeral = config[:ephemeral]
+          if ephemeral
+            ephemeral_list = ephemeral.split(/[\s,]+/)
+            ephemeral_list.each_with_index do |device_name, i|
+              server_def[:block_device_mapping] << {'VirtualName' => "ephemeral#{i}", 'DeviceName' => device_name}
+            end
           end
         end
 
