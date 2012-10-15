@@ -90,7 +90,7 @@ class Chef
         :short => "-x USERNAME",
         :long => "--ssh-user USERNAME",
         :description => "The ssh username",
-        :default => "root"
+        :proc => Proc.new { |key| Chef::Config[:knife][:ssh_user] = key }
 
       option :ssh_password,
         :short => "-P PASSWORD",
@@ -324,7 +324,7 @@ class Chef
         bootstrap = Chef::Knife::Bootstrap.new
         bootstrap.name_args = [fqdn]
         bootstrap.config[:run_list] = locate_config_value(:run_list) || []
-        bootstrap.config[:ssh_user] = config[:ssh_user]
+        bootstrap.config[:ssh_user] = locate_config_value(:ssh_user) || "root"
         bootstrap.config[:ssh_port] = config[:ssh_port]
         bootstrap.config[:identity_file] = config[:identity_file]
         bootstrap.config[:chef_node_name] = locate_config_value(:chef_node_name) || server.id
